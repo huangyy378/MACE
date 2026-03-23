@@ -25,13 +25,13 @@
 #include "Mustard/Data/Processor.h++"
 #include "Mustard/Data/Tuple.h++"
 #include "Mustard/Env/MPIEnv.h++"
+#include "Mustard/Math/GeometryRepresentation.h++"
+#include "Mustard/Math/Vector.h++"
 #include "Mustard/Parallel/ProcessSpecificPath.h++"
 #include "Mustard/Utility/LiteralUnit.h++"
 #include "Mustard/Utility/MathConstant.h++"
 #include "Mustard/Utility/PhysicalConstant.h++"
 #include "Mustard/Utility/VectorArithmeticOperator.h++"
-
-#include "CLHEP/Vector/ThreeVector.h"
 
 #include "ROOT/RDataFrame.hxx"
 #include "TFile.h"
@@ -77,7 +77,14 @@ auto ReconECAL::Main(int argc, char* argv[]) const -> int {
     }
 
     const auto& ecal{Detector::Description::ECAL::Instance()};
-    const auto& moduleList{ecal.Array().moduleList};
+    const auto& faceList{ecal.Mesh().faceList};
+
+    std::map<int, Mustard::Point3D> centroidMap;
+
+    for (int i{}; auto&& [centroid, _1, _2, _3, _4] : std::as_const(faceList)) {
+        centroidMap[i] = centroid;
+        i++;
+    }
 
     TFile outputFile{Mustard::Parallel::ProcessSpecificPath("dual_coin.root").generic_string().c_str(), "RECREATE"};
     using ECALEnergy = Mustard::Data::TupleModel<Mustard::Data::Value<float, "Edep", "Energy deposition">,
@@ -122,11 +129,11 @@ auto ReconECAL::Main(int argc, char* argv[]) const -> int {
 
             const auto clustering = [&](std::unordered_set<short>& set, std::vector<short>::iterator it) {
                 set.insert(*it); // add seed module
-                for (auto&& m : moduleList[*it].neighborModuleID) {
+                for (auto&& m : faceList[*it].neighborModuleID) {
                     set.insert(m); // add 1st layer
-                    for (auto&& n : moduleList[m].neighborModuleID) {
-                        set.insert(n);                                                                            // add 2nd layer
-                        set.insert(moduleList[n].neighborModuleID.begin(), moduleList[n].neighborModuleID.end()); // add 3rd layer
+                    for (auto&& n : faceList[m].neighborModuleID) {
+                        set.insert(n);                                                                        // add 2nd layer
+                        set.insert(faceList[n].neighborModuleID.begin(), faceList[n].neighborModuleID.end()); // add 3rd layer
                     }
                 }
 
@@ -147,16 +154,12 @@ auto ReconECAL::Main(int argc, char* argv[]) const -> int {
                 return;
             }
 
-            const auto& c1{moduleList.at(*firstSeedModule).centroid};
-            const auto& c2{moduleList.at(*secondSeedModule).centroid};
-            const auto theta{c1.angle(c2)};
-
             Mustard::Data::Tuple<ECALEnergy> energyTuple;
             Get<"Edep">(energyTuple) = firstClusterEnergy + secondClusterEnergy;
             Get<"Edep1">(energyTuple) = firstClusterEnergy;
             Get<"Edep2">(energyTuple) = secondClusterEnergy;
             Get<"dE">(energyTuple) = std::abs(firstClusterEnergy - secondClusterEnergy);
-            Get<"theta">(energyTuple) = theta;
+            Get<"theta">(energyTuple) = centroidMap.at(*firstSeedModule).angle(centroidMap.at(*secondSeedModule));
             Get<"dt0">(energyTuple) = std::abs(*Get<"t0">(*hitDict.at(*firstSeedModule)) - *Get<"t0">(*hitDict.at(*secondSeedModule)));
             reconEnergy.Fill(std::move(energyTuple));
         });

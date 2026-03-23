@@ -20,10 +20,11 @@
 #pragma once
 
 #include "Mustard/Detector/Description/DescriptionWithCacheBase.h++"
+#include "Mustard/Math/GeometryRepresentation.h++"
+#include "Mustard/Math/Vector.h++"
 
 #include "CLHEP/Geometry/Point3D.h"
 #include "CLHEP/Geometry/Transform3D.h"
-#include "CLHEP/Vector/ThreeVector.h"
 
 #include "muc/array"
 #include "muc/hash_map"
@@ -49,19 +50,12 @@ public:
     auto CrystalPackageThickness() const -> auto { return *fCrystalPackageThickness; }
     auto UpstreamWindowRadius() const -> auto { return *fUpstreamWindowRadius; }
     auto DownstreamWindowRadius() const -> auto { return *fDownstreamWindowRadius; }
-
-    auto Array() const -> const auto& { return *fArray; }
-    auto NUnit() const -> auto { return Array().moduleList.size(); }
-    auto ComputeTransformToOuterSurfaceWithOffset(int moduleID, double offsetInNormalDirection) const -> HepGeom::Transform3D;
-    auto ModuleSelection() const -> const auto& { return *fModuleSelection; }
-
     auto ScintillationEnergyBin() const -> auto& { return *fScintillationEnergyBin; }
     auto ScintillationComponent1() const -> auto& { return *fScintillationComponent1; }
     auto ScintillationYield() const -> auto { return *fScintillationYield; }
     auto ScintillationTimeConstant1() const -> auto { return *fScintillationTimeConstant1; }
     auto ResolutionScale() const -> auto { return *fResolutionScale; }
 
-    auto UsePhaseICrystal() const -> auto { return *fUsePhaseICrystal; }
     auto UseMPPC() const -> auto { return *fUseMPPC; }
 
     auto PMTDimensions() const -> const auto& { return *fPMTDimensions; }
@@ -71,7 +65,7 @@ public:
     auto PMTEnergyBin() const -> const auto& { return *fPMTEnergyBin; }
     auto PMTQuantumEfficiency() const -> const auto& { return *fPMTQuantumEfficiency; }
 
-    auto MPPCNPixelRowSet() const -> const auto& { return *fMPPCNPixelRowSet; }
+    auto MPPCNPixelRow() const -> const auto& { return *fMPPCNPixelRow; }
     auto MPPCPixelSizeSet() const -> const auto& { return *fMPPCPixelSizeSet; }
     auto MPPCPitch() const -> auto { return *fMPPCPitch; }
     auto MPPCThickness() const -> auto { return *fMPPCThickness; }
@@ -80,8 +74,12 @@ public:
     auto MPPCEnergyBin() const -> const auto& { return *fMPPCEnergyBin; }
     auto MPPCEfficiency() const -> const auto& { return *fMPPCEfficiency; }
 
+    auto Mesh() const -> const auto& { return *fMesh; }
+    auto NUnit() const -> auto { return Mesh().faceList.size(); }
+    auto ComputeTransformToOuterSurfaceWithOffset(int moduleID, double offsetInNormalDirection) const -> HepGeom::Transform3D;
+
+    auto ModuleSelection() const -> const auto& { return *fModuleSelection; }
     auto WaveformIntegralTime() const -> auto { return *fWaveformIntegralTime; }
-    auto UseOptics() const -> auto { return *fUseOptics; }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,15 +89,12 @@ public:
     auto CrystalPackageThickness(double val) -> void { fCrystalPackageThickness = val; }
     auto UpstreamWindowRadius(double val) -> void { fUpstreamWindowRadius = val; }
     auto DownstreamWindowRadius(double val) -> void { fDownstreamWindowRadius = val; }
-    auto ModuleSelection(std::vector<int> val) { fModuleSelection = std::move(val); }
-
     auto ScintillationEnergyBin(std::vector<double> val) -> void { fScintillationEnergyBin = std::move(val); }
     auto ScintillationComponent1(std::vector<double> val) -> void { fScintillationComponent1 = std::move(val); }
     auto ScintillationYield(double val) -> void { fScintillationYield = val; }
     auto ScintillationTimeConstant1(double val) -> void { fScintillationTimeConstant1 = val; }
     auto ResolutionScale(double val) -> void { fResolutionScale = val; }
 
-    auto UsePhaseICrystal(bool val) -> void { fUsePhaseICrystal = val; }
     auto UseMPPC(bool val) -> void { fUseMPPC = val; }
 
     auto PMTDimensions(std::vector<muc::array3d> val) -> void { fPMTDimensions = std::move(val); }
@@ -109,7 +104,7 @@ public:
     auto PMTEnergyBin(std::vector<double> val) -> void { fPMTEnergyBin = std::move(val); }
     auto PMTQuantumEfficiency(std::vector<double> val) -> void { fPMTQuantumEfficiency = std::move(val); }
 
-    auto MPPCNPixelRowSet(std::vector<int> val) -> void { fMPPCNPixelRowSet = std::move(val); }
+    auto MPPCNPixelRow(std::vector<int> val) -> void { fMPPCNPixelRow = std::move(val); }
     auto MPPCPixelSizeSet(std::vector<double> val) -> void { fMPPCPixelSizeSet = std::move(val); }
     auto MPPCPitch(double val) -> void { fMPPCPitch = val; }
     auto MPPCThickness(double val) -> void { fMPPCThickness = val; }
@@ -118,24 +113,23 @@ public:
     auto MPPCEnergyBin(std::vector<double> val) -> void { fMPPCEnergyBin = std::move(val); }
     auto MPPCEfficiency(std::vector<double> val) -> void { fMPPCEfficiency = std::move(val); }
 
+    auto ModuleSelection(std::vector<int> val) { fModuleSelection = std::move(val); }
     auto WaveformIntegralTime(double val) { fWaveformIntegralTime = val; }
-    auto UseOptics(double val) { fUseOptics = val; }
 
-    struct ArrayInformation {
+    struct MeshInformation {
         struct Module {
-            int moduleID{};
-            std::unordered_set<int> neighborModuleID{};
-            int typeID{};
-            CLHEP::Hep3Vector centroid{};
-            CLHEP::Hep3Vector normal{};
+            Mustard::Point3D centroid{};
+            Mustard::Vector3D normal{};
             std::vector<gsl::index> vertexIndex{};
+            int typeID{};
+            std::unordered_set<int> neighborModuleID{};
         };
         std::vector<HepGeom::Point3D<double>> vertexList{};
-        std::vector<Module> moduleList{};
+        std::vector<Module> faceList{};
     };
 
 private:
-    auto CalculateArrayInformation() const -> ArrayInformation;
+    auto CalculateMeshInformation() const -> MeshInformation;
 
     auto ImportAllValue(const YAML::Node& node) -> void override;
     auto ExportAllValue(YAML::Node& node) const -> void override;
@@ -147,16 +141,12 @@ private:
     Simple<double> fCrystalPackageThickness;
     Simple<double> fUpstreamWindowRadius;
     Simple<double> fDownstreamWindowRadius;
-    Cached<ArrayInformation> fArray;
-    Simple<std::vector<int>> fModuleSelection;
-
     Simple<std::vector<double>> fScintillationEnergyBin;
     Simple<std::vector<double>> fScintillationComponent1;
     Simple<double> fScintillationYield;
     Simple<double> fScintillationTimeConstant1;
     Simple<double> fResolutionScale;
 
-    Simple<bool> fUsePhaseICrystal;
     Simple<bool> fUseMPPC;
 
     Simple<std::vector<muc::array3d>> fPMTDimensions;
@@ -166,7 +156,7 @@ private:
     Simple<std::vector<double>> fPMTEnergyBin;
     Simple<std::vector<double>> fPMTQuantumEfficiency;
 
-    Simple<std::vector<int>> fMPPCNPixelRowSet;
+    Simple<std::vector<int>> fMPPCNPixelRow;
     Simple<std::vector<double>> fMPPCPixelSizeSet;
     Simple<double> fMPPCPitch;
     Simple<double> fMPPCThickness;
@@ -175,8 +165,9 @@ private:
     Simple<std::vector<double>> fMPPCEnergyBin;
     Simple<std::vector<double>> fMPPCEfficiency;
 
+    Cached<MeshInformation> fMesh;
+    Simple<std::vector<int>> fModuleSelection;
     Simple<double> fWaveformIntegralTime;
-    Simple<bool> fUseOptics;
 };
 
 } // namespace MACE::Detector::Description

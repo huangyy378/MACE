@@ -31,7 +31,7 @@ if(MACESW_BUILTIN_GENFIT)
     message(STATUS "MACESW will use built-in GenFit")
     # set download dest and URL
     set(MACESW_BUILTIN_GENFIT_SRC_DIR "${MACESW_PROJECT_3RDPARTY_DIR}/GenFit-02-00-01")
-    set(MACESW_BUILTIN_GENFIT_URL "https://github.com/zhao-shihan/GenFit/archive/refs/heads/master.zip")
+    set(MACESW_BUILTIN_GENFIT_URL "https://github.com/huangyy378/GenFit/archive/refs/heads/master.zip")
     # reuse or download
     include(FetchContent)
     if(EXISTS "${MACESW_BUILTIN_GENFIT_SRC_DIR}/CMakeLists.txt")
